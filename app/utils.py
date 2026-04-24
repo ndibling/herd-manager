@@ -1,11 +1,11 @@
-from datetime import date
-from typing import Optional, Dict, Any
+
+typing import Optional, Dict, Any
 from sqlmodel import Session
 from .models import Animal
 
 
 def compute_age(birthday: Optional[date]) -> Optional[int]:
-    """Return age in years based on a birthday.
+   age in years based on a birthday.
 
     If `birthday` is None, returns None.
     """
@@ -14,7 +14,7 @@ def compute_age(birthday: Optional[date]) -> Optional[int]:
 
     today = date.today()
     years = today.year - birthday.year - (
-day.month, today.day) < (birthday.month, birthday.day)
+        (today.month, today.day) < (birthday.month, birthday.day)
     )
     return max(years, 0)
 
@@ -54,6 +54,9 @@ def build_pedigree(
             if dam
             else ({"name": getattr(a, "dam_name", None)} if getattr(a, "dam_name", None) else {})
         )
+
+        return result
+
 
         return result
 
