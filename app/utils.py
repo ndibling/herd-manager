@@ -1,31 +1,46 @@
 from datetime import date
-from typing import Optional, Dict, Any, List
-from sqlmodel import Session, select
+from typing import Optional, Dict, Any
+from sqlmodel import Session
 from .models import Animal
 
-def compute_age(birthday: Optional[date]) -> Optional[int]:
+
+def compute_age(birthday: Optional[date]) -> Optional"""Return age in years based on a birthday."""
     if not birthday:
         return None
- date.today()
-    years = today.year - birthday.year - ((today.month, today.day) < (birthday.month, birthday.day))
+    today = date.today()
+    years = today.year - birthday.year - (
+        (today.month, today.day) < (birthday.month, birthday.day)
+    )
     return max(years, 0)
 
+
 def build_pedigree(session: Session, animal_id: int, generations: int = 4) -> Dict[str, Any]:
-    """Return a nested pedigree up to N generations {animal, sire, dam, ...}."""
-    a = session.get(Animal, animal_id)
-    if not a:
+    """Return a nested pedigree up to N generations {animal, sire, dam}."""
+    animal = session.get(Animal, animal_id)
+    if not animal:
         return {}
-    def node(x: Animal, depth: int) -> Dict[str, Any]:
-        if not x or depth == 0: 
+
+    def node(a: Optional[Animal], depth: int) -> Dict[str, Any]:
+        if not a or depth == 0:
             return {}
-        data = {
-            "id": x.id, "name": x.name, "species": x.species,
-            "sire_name": x.sire_name, "dam_name": x.dam_name,
-            "photo_url": x.photo_url,
+        result = {
+            "id": a.id,
+            "name": a.name,
+            "species": a.species.value,
+            "photo_url": a.photo_url,
+            "sire_name": a.sire_name,
+            "dam_name": a.dam_name,
         }
-        sire = session.get(Animal, x.sire_id) if x.sire_id else None
-        dam  = session.get(Animal, x.dam_id)  if x.dam_id  else None
-        data["sire"] = node(sire, depth-1) if sire else {"name": x.sire_name} if x.sire_name else {}
-        data["dam"]  = node(dam,  depth-1) if dam  else {"name": x.dam_name} if x.dam_name else {}
-        return data
-    return node(a, generations)
+
+        sire = session.get(Animal, a.sire_id) if a.sire_id else None
+        dam = session.get(Animal, a.dam_id) if a.dam_id else None
+
+        result["sire"] = node(sire, depth - 1) if sire else (
+            {"name": a.sire_name} if a.sire_name else {}
+        )
+        result["dam"] = node(dam, depth - 1) if dam else (
+            {"name": a.dam_name} if a.dam_name else {}
+        )
+        return result
+
+    return node(animal, generations)
