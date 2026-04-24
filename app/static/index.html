@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Herd Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  /static/style.css
+</head>
+<body>
+  <header>
+    /static/logo.svg
+    <h1>Herd Manager</h1>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="form-row">
+        <div class="form-col"><button id="btn-refresh">Refresh</button></div>
+        <div class="form-col"><button class="secondary" id="btn-new">Add Animal</button></div>
+      </div>
+      <div id="grid" class="grid"></div>
+    </section>
+
+    <section id="detail" class="section" style="display:none;"></section>
+
+    <!-- New Animal Modal (simple inline) -->
+    <section id="new-animal" class="section" style="display:none;">
+      <h2>Add Animal</h2>
+      <form id="form-new" enctype="multipart/form-data">
+        <div class="form-row">
+          <div class="form-col">
+            <label>Name</label><input name="name" required />
+            <label>Species</label>
+            <select name="species">
+              <option>cow</option><option>goat</option><option>sheep</option>
+              <option>horse</option><option>swine</option><option>chicken</option><option>rabbit</option>
+            </select>
+            <label>Birthday</label><input type="date" name="birthday" />
+            <label>Height (inches)</label><input type="number" step="0.1" name="height_inches"/>
+            <label>Weight (lbs)</label><input type="number" step="0.1" name="weight_lbs"/>
+            <label>Coloring</label><input name="coloring"/>
+          </div>
+          <div class="form-col">
+            <label>Sire name</label><input name="sire_name"/>
+            <label>Dam name</label><input name="dam_name"/>
+            <label>Photo</label><input type="file" name="photo" accept="image/*"/>
+            <label>Organization</label>
+            <select name="organization_id" id="org-select"></select>
+            <div class="small">Default org seeded: Mini Zebu of America</div>
+          </div>
+        </div>
+        <button type="submit">Save</button>
+        <button type="button" class="secondary" id="btn-cancel-new">Cancel</button>
+      </form>
+    </section>
+  </main>
+
+<script>
+async function fetchJSON(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+
+async function loadOrgs() {
+  const orgs = await fetchJSON('/api/organizations');
+  const sel = document.getElementById('org-select');
+  sel.innerHTML = '<option value="">(none)</option>' + orgs.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+}
+
+function animalCard(a) {
+  const img = a.photo_url ? a.photo_url.replace('data/uploads/', '/uploads/') : '/static/logo.svg';
+  const shots = (a.treatments_count || 0);
+  return `
+    <div class="card" data-id="${a.id}">
+      <img src="${img}" alt="${a.name}"       <div class="title">${a.name}</div>
+        <div class="meta">${a.species} • ${a.age ?? '?'} yrs</div>
+        ${a.organization_name ? `<div class="small">${a.organization_name}</div>` : ''}
+        <div class="small">${a.coloring ?? ''}</div>
+      </div>
+    </div>`;
+}
+
+async function refresh() {
+  const animals = await fetchJSON('/api/animals');
+  const grid = document.getElementById('grid');
+  grid.innerHTML = animals.map(animalCard).join('');
+  grid.querySelectorAll('.card').forEach(c => c.onclick = () => openDetail(c.dataset.id));
+}
+
+async function openDetail(id) {
+  const a = await fetchJSON(`/api/animals/${id}`);
+  const img = a.photo_url ? a.photo_url.replace('data/uploads/', '/uploads/') : '/static/logo.svg';
+  const detail = document.getElementById('detail'); detail.style.display = 'block';
+  detail.innerHTML = `
+    <h2>${a.name}</h2>
+    <div class="form-row">
+      <div class="form-col">${img}</div>
+      <div class="form-col">
+        <div><b>Species:</b> ${a.species}</div>
+        <div><b>Age:</b> ${a.age ?? '—'} years</div>
+        <div><b>Birthday:</b> ${a.birthday ?? '—'}</div>
+        <div><b>Height:</b> ${a.height_inches ?? 0} inches</div>
+        <div><b>Weight:</b> ${a.weight_lbs ?? 0} lbs</div>
+        <div><b>Coloring:</b> ${a.coloring ?? '—'}</div>
+        <div><b>Parents:</b> ${a.sire_name ?? '—'} / ${a.dam_name ?? '—'}</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="health">Health</div>
+      <div class="tab" data-tab="pedigree">Pedigree</div>
+      <div class="tab" data-tab="documents">Documents</div>
+    </div>
+
+    <div id="tab-health">
+      <form id="form-tx" enctype="multipart/form-data">
+        <div class="form-row">
+          <div class="form-col">
+            <label>Date</label><input type="date" name="date" required/>
+            <label>Type</label><select name="category"><option>shot</option><option>medicine</option></select>
+            <label>Name</label><input name="name" required/>
+            <label>Dose</label><input name="dose"/>
+            <label>Notes</label><textarea name="notes" rows="3"></textarea>
+          </div>
+        </div>
+        <button type="submit">Add Treatment</button>
+      </form>
+      <table class="table" id="tx-table"><thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Dose</th><th>Notes</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="tab-pedigree" style="display:none;"></div>
+
+    <div id="tab-docs" style="display:none;">
+      <form id="form-doc" enctype="multipart/form-data">
+        <div class="form-row">
+          <div class="form-col"><label>Title</label><input name="title" required/></div>
+          <div class="form-col"><label>Organization</label>${document.getElementById('org-select').outerHTML.replace('org-select','org-doc')}</div>
+          <div class="form-col"><label>File</label><input type="file" name="file" accept=".pdf,image/*" required/></div>
+        </div>
+        <label>Note</label><textarea name="note" rows="2"></textarea>
+        <button type="submit">Upload</button>
+      </form>
+      <ul id="doc-list"></ul>
+    </div>
+  `;
+  await loadOrgs(); await loadTx(id); await loadDocs(id); setupTabs();
+  await loadPedigree(id);
+  document.getElementById('form-tx').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    await fetchJSON(`/api/animals/${id}/treatments`, { method:'POST', body:fd });
+    await loadTx(id);
+    e.target.reset();
+  };
+  document.getElementById('form-doc').onsubmit = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const orgSel = document.getElementById('org-doc'); fd.set('organization_id', orgSel.value || '');
+    await fetchJSON(`/api/animals/${id}/documents`, { method:'POST', body:fd });
+    await loadDocs(id);
+    e.target.reset();
+  };
+}
+
+async function loadTx(id){
+  const rows = await fetchJSON(`/api/animals/${id}/treatments`);
+  const tbody = document.querySelector('#tx-table tbody');
+  tbody.innerHTML = rows.map(r => `<tr><td>${r.date}</td><td>${r.category}</td><td>${r.name}</td><td>${r.dose ?? ''}</td><td>${r.notes ?? ''}</td></tr>`).join('');
+}
+
+async function loadDocs(id){
+  const docs = await fetchJSON(`/api/animals/${id}/documents`);
+  const ul = document.getElementById('doc-list');
+  ul.innerHTML = docs.map(d => `<li><b>${d.title}</b> — ${new Date(d.uploaded_at).toLocaleString()}<br/><span class="small">${d.note ?? ''}</span></li>`).join('');
+}
+
+async function loadPedigree(id){
+  const ped = await fetchJSON(`/api/animals/${id}/pedigree?generations=4`);
+  const el = document.getElementById('tab-pedigree');
+  const render = (n, depth=0) => {
+    if(!n || Object.keys(n).length===0) return '';
+    return `
+      <div style="margin-left:${depth*16}px;border-left:2px solid #e5e7eb;padding-left:.5rem">
+        <div class="title">${n.name ?? '(unknown)'}</div>
+        <div class="small">Gen ${depth+1}</div>
+        ${render(n.sire, depth+1)}
+        ${render(n.dam, depth+1)}
+      </div>`;
+  };
+  el.innerHTML = `<h3>4-Generation Pedigree</h3>${render(ped,0)}`;
+}
+
+function setupTabs(){
+  document.querySelectorAll('.tab').forEach(t => {
+    t.onclick = () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      ['health','pedigree','documents'].forEach(id => {
+        document.getElementById('tab-'+id).style.display = (t.dataset.tab===id ? 'block' : 'none');
+      });
+    };
+  });
+}
+
+document.getElementById('btn-refresh').onclick = refresh;
+document.getElementById('btn-new').onclick = () => { document.getElementById('new-animal').style.display='block'; loadOrgs(); };
+document.getElementById('btn-cancel-new').onclick = () => { document.getElementById('new-animal').style.display='none'; };
+
+document.getElementById('form-new').onsubmit = async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  await fetchJSON('/api/animals', { method:'POST', body:fd });
+  e.target.reset();
+  document.getElementById('new-animal').style.display='none';
+  refresh();
+};
+
+refresh();
+</script>
+</body>
+</html>
