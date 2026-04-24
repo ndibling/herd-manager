@@ -1,11 +1,10 @@
-
-typing import Optional, Dict, Any
+from datetime import date
+from typing import Optional, Dict, Any
 from sqlmodel import Session
 from .models import Animal
 
 
-def compute_age(birthday: Optional[date]) -> Optional[int]:
-   age in years based on a birthday.
+def compute_age(birthday: Optional[date]) -> Optional"""Return age in years based on a birthday.
 
     If `birthday` is None, returns None.
     """
@@ -41,8 +40,16 @@ def build_pedigree(
             "dam_name": getattr(a, "dam_name", None),
         }
 
-        sire = session.get(Animal, getattr(a, "sire_id", None)) if getattr(a, "sire_id", None) else None
-        dam = session.get(Animal, getattr(a, "dam_id", None)) if getattr(a, "dam_id", None) else None
+        sire = (
+            session.get(Animal, getattr(a, "sire_id", None))
+            if getattr(a, "sire_id", None)
+            else None
+        )
+        dam = (
+            session.get(Animal, getattr(a, "dam_id", None))
+            if getattr(a, "dam_id", None)
+            else None
+        )
 
         result["sire"] = (
             node(sire, depth - 1)
@@ -54,9 +61,6 @@ def build_pedigree(
             if dam
             else ({"name": getattr(a, "dam_name", None)} if getattr(a, "dam_name", None) else {})
         )
-
-        return result
-
 
         return result
 
