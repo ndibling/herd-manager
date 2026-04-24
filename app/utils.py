@@ -31,13 +31,12 @@ def build_pedigree(
         result = {
             "id": a.id,
             "name": a.name,
-            "species": a.species.value,
+            "species": a.species.value if hasattr(a.species, "value") else a.species,
             "photo_url": a.photo_url,
             "sire_name": a.sire_name,
             "dam_name": a.dam_name,
         }
 
-        # Recurse into parents
         sire = session.get(Animal, a.sire_id) if a.sire_id else None
         dam = session.get(Animal, a.dam_id) if a.dam_id else None
 
