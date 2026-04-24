@@ -1,11 +1,55 @@
-# app/router.py (only showing changed params)
+import os
+from datetime import date
+from typing import Optional
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse
+from sqlmodel import Session, select
 
-from enum import Enum
-from .models import Animal, Treatment, Organization, Document, Species, TreatmentCategory
+from .db import engine
+from .models import (
+    Animal,
+    Treatment,
+    Organization,
+    Document,
+    Species,
+    TreatmentCategory
+)
+from .utils import compute_age, build_pedigree
+
+router = APIRouter()
+
+
+# -------------------------------------------------------------
+# Seed default organization
+# -------------------------------------------------------------
+@router.on_event("startup")
+def seed_org():
+    with Session(engine) as s:
+        exists = s.exec(select(Organization).where(Organization.name == "Mini Zebu of America")).first()
+        if not exists:
+            s.add(Organization(name="Mini Zebu of America"))
+            s.commit()
+
+
+# -------------------------------------------------------------
+# Animals
+# -------------------------------------------------------------
+@router.get("/api/animals")
+def list_animals():
+    with Session(engine) as s:
+        animals = s.exec(select(Animal)).all()
+        result = []
+        for a in animals:
+            item = a.model_dump()
+            item["age"] = compute_age(a.birthday)
+            item["organization_name"] = a.organization.name if a.organization else None
+            result.append(item)
+        return result
+
 
 @router.post("/api/animals")
 def create_animal(
-    species: Species = Form(...),  # <- Enum
+    species: Species = Form(...),
     name: str = Form(...),
     birthday: Optional[date] = Form(None),
     height_inches: Optional[float] = Form(None),
@@ -18,23 +62,149 @@ def create_animal(
     organization_id: Optional[int] = Form(None),
     photo: Optional[UploadFile] = File(None),
 ):
-    # photo handling unchanged...
+    photo_url = None
+
+    if photo:
+        if not photo.filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+            raise HTTPException(status_code=400, detail="Unsupported image type")
+        safe = name.strip().replace(" ", "_")
+        path = f"data/uploads/photos/{safe}_{photo.filename}"
+        with open(path, "wb") as f:
+            f.write(photo.file.read())
+        photo_url = path
+
     a = Animal(
-        species=species, name=name, birthday=birthday,
-        height_inches=height_inches or 0.0, weight_lbs=weight_lbs or 0.0,
-        coloring=coloring, sire_id=sire_id, dam_id=dam_id,
-        sire_name=sire_name, dam_name=dam_name,
-        photo_url=photo_url, organization_id=organization_id
+        species=species,
+        name=name,
+        birthday=birthday,
+        height_inches=height_inches or 0.0,
+        weight_lbs=weight_lbs or 0.0,
+        coloring=coloring,
+        sire_id=sire_id,
+        dam_id=dam_id,
+        sire_name=sire_name,
+        dam_name=dam_name,
+        photo_url=photo_url,
+        organization_id=organization_id
     )
-    # save unchanged...
+
+    with Session(engine) as s:
+        s.add(a)
+        s.commit()
+        s.refresh(a)
+        return {"id": a.id}
+
+
+@router.get("/uploads/photos/{filename}")
+def get_photo(filename: str):
+    path = os.path.join("data/uploads/photos", filename)
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(path)
+
+
+# -------------------------------------------------------------
+# Treatments (shots & medicines)
+# -------------------------------------------------------------
+@router.get("/api/animals/{animal_id}/treatments")
+def list_treatments(animal_id: int):
+    with Session(engine) as s:
+        items = s.exec(select(Treatment).where(Treatment.animal_id == animal_id)).all()
+        return [t.model_dump() for t in items]
+
 
 @router.post("/api/animals/{animal_id}/treatments")
 def add_treatment(
     animal_id: int,
     date: date = Form(...),
-    category: TreatmentCategory = Form(...),  # <- Enum
+    category: TreatmentCategory = Form(...),
     name: str = Form(...),
     dose: Optional[str] = Form(None),
-    notes: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None)
 ):
-    # unchanged...
+    with Session(engine) as s:
+        if not s.get(Animal, animal_id):
+            raise HTTPException(status_code=404, detail="Animal not found")
+        t = Treatment(
+            animal_id=animal_id,
+            date=date,
+            category=category,
+            name=name,
+            dose=dose,
+            notes=notes
+        )
+        s.add(t)
+        s.commit()
+        s.refresh(t)
+        return {"id": t.id}
+
+
+# -------------------------------------------------------------
+# Pedigree
+# -------------------------------------------------------------
+@router.get("/api/animals/{animal_id}/pedigree")
+def get_pedigree(animal_id: int, generations: int = 4):
+    with Session(engine) as s:
+        return build_pedigree(s, animal_id, generations=generations)
+
+
+# -------------------------------------------------------------
+# Documents
+# -------------------------------------------------------------
+@router.get("/api/animals/{animal_id}/documents")
+def list_docs(animal_id: int):
+    with Session(engine) as s:
+        docs = s.exec(select(Document).where(Document.animal_id == animal_id)).all()
+        return [d.model_dump() for d in docs]
+
+
+@router.post("/api/animals/{animal_id}/documents")
+def upload_doc(
+    animal_id: int,
+    title: str = Form(...),
+    organization_id: Optional[int] = Form(None),
+    note: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+):
+    if not file.filename.lower().endswith((".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif")):
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+
+    path = f"data/uploads/docs/{animal_id}_{file.filename}"
+    with open(path, "wb") as f:
+        f.write(file.file.read())
+
+    with Session(engine) as s:
+        if not s.get(Animal, animal_id):
+            raise HTTPException(status_code=404, detail="Animal not found")
+
+        d = Document(
+            animal_id=animal_id,
+            organization_id=organization_id,
+            title=title,
+            file_url=path,
+            note=note
+        )
+        s.add(d)
+        s.commit()
+        s.refresh(d)
+        return {"id": d.id}
+
+
+# -------------------------------------------------------------
+# Organizations
+# -------------------------------------------------------------
+@router.get("/api/organizations")
+def list_orgs():
+    with Session(engine) as s:
+        orgs = s.exec(select(Organization)).all()
+        return [o.model_dump() for o in orgs]
+
+
+@router.post("/api/organizations")
+def add_org(name: str = Form(...), contact_info: Optional[str] = Form(None)):
+    with Session(engine) as s:
+        o = Organization(name=name, contact_info=contact_info)
+        s.add(o)
+        s.commit()
+        s.refresh(o)
+        return {"id": o.id}
