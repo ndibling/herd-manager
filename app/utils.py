@@ -5,13 +5,16 @@ from .models import Animal
 
 
 def compute_age(birthday: Optional[date]) -> Optional[int]:
-    """Return age in years based on a birthday."""
+    """Return age in years based on a birthday.
+
+    If `birthday` is None, returns None.
+    """
     if birthday is None:
         return None
 
-   te.today()
+    today = date.today()
     years = today.year - birthday.year - (
-        (today.month, today.day) < (birthday.month, birthday.day)
+day.month, today.day) < (birthday.month, birthday.day)
     )
     return max(years, 0)
 
@@ -22,11 +25,11 @@ def build_pedigree(
     """Return a nested pedigree dictionary up to N generations."""
 
     animal = session.get(Animal, animal_id)
-    if not animal:
+    if animal is None:
         return {}
 
     def node(a: Optional[Animal], depth: int) -> Dict[str, Any]:
-        if not a or depth == 0:
+        if a is None or depth == 0:
             return {}
 
         result: Dict[str, Any] = {
@@ -44,12 +47,12 @@ def build_pedigree(
         result["sire"] = (
             node(sire, depth - 1)
             if sire
-            else ({"name": a.sire_name} if getattr(a, "sire_name", None) else {})
+            else ({"name": getattr(a, "sire_name", None)} if getattr(a, "sire_name", None) else {})
         )
         result["dam"] = (
             node(dam, depth - 1)
             if dam
-            else ({"name": a.dam_name} if getattr(a, "dam_name", None) else {})
+            else ({"name": getattr(a, "dam_name", None)} if getattr(a, "dam_name", None) else {})
         )
 
         return result
