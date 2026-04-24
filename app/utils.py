@@ -4,12 +4,12 @@ from sqlmodel import Session
 from .models import Animal
 
 
-def compute_age(birthday: Optional[date]) -> Optional [int]
+def compute_age(birthday: Optional[date]) -> Optional[int]:
     """Return age in years based on a birthday."""
-    if not birthday:
+    if birthday is None:
         return None
 
-    today = date.today()
+   te.today()
     years = today.year - birthday.year - (
         (today.month, today.day) < (birthday.month, birthday.day)
     )
@@ -29,27 +29,27 @@ def build_pedigree(
         if not a or depth == 0:
             return {}
 
-        result = {
+        result: Dict[str, Any] = {
             "id": a.id,
             "name": a.name,
             "species": a.species.value if hasattr(a.species, "value") else a.species,
-            "photo_url": a.photo_url,
-            "sire_name": a.sire_name,
-            "dam_name": a.dam_name,
+            "photo_url": getattr(a, "photo_url", None),
+            "sire_name": getattr(a, "sire_name", None),
+            "dam_name": getattr(a, "dam_name", None),
         }
 
-        sire = session.get(Animal, a.sire_id) if a.sire_id else None
-        dam = session.get(Animal, a.dam_id) if a.dam_id else None
+        sire = session.get(Animal, getattr(a, "sire_id", None)) if getattr(a, "sire_id", None) else None
+        dam = session.get(Animal, getattr(a, "dam_id", None)) if getattr(a, "dam_id", None) else None
 
         result["sire"] = (
             node(sire, depth - 1)
             if sire
-            else ({"name": a.sire_name} if a.sire_name else {})
+            else ({"name": a.sire_name} if getattr(a, "sire_name", None) else {})
         )
         result["dam"] = (
             node(dam, depth - 1)
             if dam
-            else ({"name": a.dam_name} if a.dam_name else {})
+            else ({"name": a.dam_name} if getattr(a, "dam_name", None) else {})
         )
 
         return result
