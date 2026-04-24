@@ -24,7 +24,18 @@ jobs:
           python-version: "3.11"
 
       - name: Install deps (runtime + dev)
-        run: pip install -r requirements.txt -r requirements-dev.txt
+        shell: bash
+        run: |
+          pip install -r requirements.txt
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          else
+            pip install pytest httpx
+          fi
+
+      # 👇 Add PYTHONPATH to include repo root
+      - name: Set PYTHONPATH
+        run: echo "PYTHONPATH=$PWD" >> $GITHUB_ENV
 
       - name: Run tests
         run: pytest -q
@@ -34,8 +45,10 @@ jobs:
     needs: build-test
     steps:
       - uses: actions/checkout@v5
+
       - name: Build image
         run: docker build -t herd-manager:ci .
+
       - name: Scan (Trivy)
         uses: aquasecurity/trivy-action@0.14.0
         with:
