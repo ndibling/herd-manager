@@ -16,15 +16,15 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5   # Updated
+      - uses: actions/checkout@v5
 
       - name: Setup Python
-        uses: actions/setup-python@v6   # Updated
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
-      - name: Install deps
-        run: pip install -r requirements.txt && pip install pytest
+      - name: Install deps (runtime + dev)
+        run: pip install -r requirements.txt -r requirements-dev.txt
 
       - name: Run tests
         run: pytest -q
@@ -33,15 +33,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-test
     steps:
-      - uses: actions/checkout@v5   # Updated
-
+      - uses: actions/checkout@v5
       - name: Build image
         run: docker build -t herd-manager:ci .
-
       - name: Scan (Trivy)
         uses: aquasecurity/trivy-action@0.14.0
         with:
           image-ref: herd-manager:ci
           format: 'table'
           exit-code: '0'
-          
