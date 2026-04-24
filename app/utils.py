@@ -4,7 +4,8 @@ from sqlmodel import Session
 from .models import Animal
 
 
-def compute_age(birthday: Optional[date]) -> Optional"""Return age in years based on a birthday."""
+def compute_age(birthday: Optional[date]) -> Optional [int]
+    """Return age in years based on a birthday."""
     if not birthday:
         return None
 
