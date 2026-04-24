@@ -1,8 +1,21 @@
+# app/models.py
 from datetime import date, datetime
-from typing import Optional, Literal
+from typing import Optional
+from enum import Enum
 from sqlmodel import SQLModel, Field, Relationship
 
-SpeciesLiteral = Literal["cow", "goat", "sheep", "horse", "swine", "chicken", "rabbit"]
+class Species(str, Enum):
+    cow = "cow"
+    goat = "goat"
+    sheep = "sheep"
+    horse = "horse"
+    swine = "swine"
+    chicken = "chicken"
+    rabbit = "rabbit"
+
+class TreatmentCategory(str, Enum):
+    shot = "shot"
+    medicine = "medicine"
 
 class Organization(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -11,21 +24,16 @@ class Organization(SQLModel, table=True):
 
 class Animal(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    species: SpeciesLiteral
+    species: Species
     name: str
     birthday: Optional[date] = None
     height_inches: Optional[float] = 0.0
     weight_lbs: Optional[float] = 0.0
     coloring: Optional[str] = None
-
-    # Parent references (optional)
     sire_id: Optional[int] = Field(default=None, foreign_key="animal.id")
     dam_id: Optional[int] = Field(default=None, foreign_key="animal.id")
-
-    # Parent names (free text to satisfy “parents names” requirement)
     sire_name: Optional[str] = None
     dam_name: Optional[str] = None
-
     photo_url: Optional[str] = None
     organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
 
@@ -39,7 +47,7 @@ class Treatment(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     animal_id: int = Field(foreign_key="animal.id")
     date: date
-    category: Literal["shot", "medicine"]
+    category: TreatmentCategory
     name: str
     dose: Optional[str] = None
     notes: Optional[str] = None
