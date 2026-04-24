@@ -1,6 +1,9 @@
 {
   "name": "Herd Manager Dev",
   "image": "mcr.microsoft.com/devcontainers/python:3.11-bookworm",
-  "postCreateCommand": "pip install -r requirements.txt",
+  "postCreateCommand": "python -m pip install --upgrade pip && pip install -r requirements.txt -r requirements-dev.txt",
   "forwardPorts": [8080],
-  "portsAttributes": { "8080": { "label": "Herd Manager", "onAutoForward": "openBrowser" } }
+  "portsAttributes": {
+    "8080": { "label": "Herd Manager", "onAutoForward": "openBrowser" }
+  }
+}
