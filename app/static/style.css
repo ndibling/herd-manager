@@ -1,0 +1,37 @@
+:root {
+  color-scheme: light;
+  --bg: #f9fbfc;
+  --text: #0f172a;
+  --muted: #6b7280;
+  --primary: #2daaaa;
+  --card: #ffffff;
+  --border: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+header { display:flex; align-items:center; gap:1rem; padding:1rem 2rem; border-bottom:1px solid var(--border); background:#fff; }
+header img { height:36px; }
+h1 { font-size:1.25rem; margin:0; }
+main { padding:2rem; max-width:1100px; margin:0 auto; }
+button, input, select, textarea { font-size:1rem; }
+button { background:var(--primary); color:#fff; border:none; border-radius:.5rem; padding:.6rem 1rem; cursor:pointer; }
+button.secondary { background:#fff; color:var(--text); border:1px solid var(--border); }
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:1rem; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:.75rem; overflow:hidden; }
+.card img { width:100%; height:150px; object-fit:cover; background:#eef2f7; }
+.card .body { padding:.75rem; }
+.card .title { font-weight:600; }
+.card .meta { color:var(--muted); font-size:.9rem; }
+.tabs { display:flex; gap:.5rem; margin:1rem 0; }
+.tab { padding:.5rem .8rem; border:1px solid var(--border); border-radius:.5rem; cursor:pointer; background:#fff; }
+.tab.active { background:var(--primary); color:#fff; border-color:transparent; }
+.form-row { display:flex; gap:1rem; flex-wrap:wrap; margin:.5rem 0; }
+.form-col { flex:1 min(340px); }
+label { display:block; color:var(--muted); margin:.25rem 0; }
+input, select, textarea { width:100%; padding:.5rem; border:1px solid var(--border); border-radius:.5rem; background:#fff; }
+.table { width:100%; border-collapse:collapse; }
+.table th, .table td { border-bottom:1px solid var(--border); padding:.5rem; text-align:left; }
+.badge { display:inline-block; background:#eef7f7; color:#106a6a; border:1px solid #cce9e9; padding:.15rem .4rem; border-radius:.4rem; font-size:.8rem; margin-right:.25rem; }
+.section { background:#fff; border:1px solid var(--border); border-radius:.75rem; padding:1rem; margin:1rem 0; }
+.small { font-size:.85rem; color:var(--muted); }
