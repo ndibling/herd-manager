@@ -1,18 +1,42 @@
-name: CodeQL
+# .github/workflows/ci.yml
+name: CI
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
-  schedule:
-    - cron: "0 3 * * 1"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # <<< opt-in to Node 24
+
+permissions:
+  contents: read
 
 jobs:
-  analyze:
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
-    uses: github/codeql-action/.github/workflows/codeql.yml@v3
-    with:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install -r requirements.txt && pip install pytest
+      - name: Run tests
+        run: pytest -q
+
+  container-scan:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t herd-manager:ci .
+      - name: Scan (Trivy)
+        uses: aquasecurity/trivy-action@0.14.0
+        with:
+          image-ref: herd-manager:ci
+          format: 'table'
+          exit-code: '0'
