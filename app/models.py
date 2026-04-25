@@ -47,19 +47,19 @@ class Animal(SQLModel, table=True):
         default=None, foreign_key="organization.id"
     )
 
-    # ❗ FIXED: disambiguate relationships (was causing AmbiguousForeignKeysError)
+    # Disambiguated self-referential relationships
+    # NOTE: remote_side must be a column object list, not a string.
     sire: Optional["Animal"] = Relationship(
         sa_relationship_kwargs={
             "foreign_keys": [sire_id],
-            "remote_side": "Animal.id",
+            "remote_side": [id],  # <-- column object, not "Animal.id"
             "uselist": False,
         }
     )
-
     dam: Optional["Animal"] = Relationship(
         sa_relationship_kwargs={
             "foreign_keys": [dam_id],
-            "remote_side": "Animal.id",
+            "remote_side": [id],  # <-- column object, not "Animal.id"
             "uselist": False,
         }
     )
