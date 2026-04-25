@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ app/
 
 # OPTIONAL DATA DIRECTORY — safe for GitHub Actions
-COPY data/ data/ || true
+COPY data/ data/
 
 RUN if [ -d "data" ]; then \
         cp -a data /srv/data; \
