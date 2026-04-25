@@ -43,23 +43,22 @@ class Animal(SQLModel, table=True):
     dam_name: Optional[str] = None
     photo_url: Optional[str] = None
 
-    organization_id: Optional[int] = Field(
-        default=None, foreign_key="organization.id"
-    )
+    organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
 
-    # Disambiguated self-referential relationships
-    # NOTE: remote_side must be a column object list, not a string.
+    # Disambiguated self-referential relationships (string-based to avoid FieldInfo issues)
     sire: Optional["Animal"] = Relationship(
         sa_relationship_kwargs={
-            "foreign_keys": [sire_id],
-            "remote_side": [id],  # <-- column object, not "Animal.id"
+            "primaryjoin": "Animal.sire_id == Animal.id",
+            "foreign_keys": "Animal.sire_id",
+            "remote_side": "Animal.id",
             "uselist": False,
         }
     )
     dam: Optional["Animal"] = Relationship(
         sa_relationship_kwargs={
-            "foreign_keys": [dam_id],
-            "remote_side": [id],  # <-- column object, not "Animal.id"
+            "primaryjoin": "Animal.dam_id == Animal.id",
+            "foreign_keys": "Animal.dam_id",
+            "remote_side": "Animal.id",
             "uselist": False,
         }
     )
@@ -85,9 +84,7 @@ class Treatment(SQLModel, table=True):
 class Document(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     animal_id: int = Field(foreign_key="animal.id")
-    organization_id: Optional[int] = Field(
-        default=None, foreign_key="organization.id"
-    )
+    organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
     title: str
     file_url: str
     uploaded_at: datetime = Field(default_factory=datetime.utcnow)
@@ -95,3 +92,4 @@ class Document(SQLModel, table=True):
 
     animal: "Animal" = Relationship(back_populates="documents")
     organization: Optional[Organization] = Relationship()
+    
